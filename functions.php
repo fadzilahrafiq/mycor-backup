@@ -54,13 +54,6 @@ function course_page_functions() {
   $active_enroll = get_active_enrollment($user_id);
 
   if ( !empty( $active_enroll ) ) {
-    ?>
-    <script>
-      hide_element('enroll-container');
-    </script>
-    <?php
-
-
     //START: CHECK FOR CURRENT ATTEMPTS
 
     foreach ( $active_enroll as $active ) {
@@ -103,6 +96,12 @@ function course_page_functions() {
           hide_element('assessment-button');
         </script>
         <?php
+      } else {
+        ?>
+        <script>
+          hide_element('enroll-container');
+        </script>
+        <?php
       }
 
       foreach ( $attempts as $attempt ) {
@@ -113,6 +112,12 @@ function course_page_functions() {
       ?>
       <script>
         var lrnEl = document.getElementById('latest-result-number');
+      </script>
+      <?php
+    } else {
+      ?>
+      <script>
+        hide_element('enroll-container');
       </script>
       <?php
     }
@@ -132,12 +137,14 @@ function course_page_functions() {
 
   $all_attempts = get_all_attempts($user_id);
 
-  if ( empty($all_attempts) ) {
+  if ( count($all_attempts) <= 0 ) {
     ?>
     <script>
       hide_element('history-container');
     </script>
     <?php
+  } else {
+    // foreach( $all_attempts as $attempt ) {
   }
 
   //END: CHECK FOR ALL ENROLLMENT
@@ -181,7 +188,7 @@ function get_all_attempts($user_id) {
 
   $sql = "SELECT * FROM $table_name AS ah INNER JOIN enrollment AS e ON ah.enroll_id = e.id";
   $sql = $sql . " WHERE e.user_id = %s";
-  $sql = $sql . " ORDER BY id DESC";
+  $sql = $sql . " ORDER BY ah.id DESC";
 
   $prepared_sql = $wpdb->prepare( $sql, $user_id );
 
