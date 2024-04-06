@@ -326,6 +326,8 @@ function assessment_processing() {
 
   $user_id = $_GET['userid'];
 
+  echo $user_id;
+
   global $wpdb;
 
   $table_name = $wpdb->prefix . "aysquiz_reports";
@@ -343,7 +345,7 @@ function assessment_processing() {
 
       $isExist = verify_assessment_data($result_id);
 
-      if (!$isExist) {
+      if ($isExist == 0) {
         add_assessment_history($row, $user_id);
       }
     }
@@ -364,7 +366,13 @@ function verify_assessment_data($result_id) {
 
   $retrieved_data = $wpdb->get_results( $prepared_sql );
 
-  return count($retrieved_data) > 0 ? true : false;
+  $isExist = 0;
+
+  if (count($retrieved_data) > 0) {
+    $isExist = 1;
+  }
+
+  return $isExist;
 }
 
 function add_assessment_history($result_obj, $user_id) {
@@ -388,11 +396,11 @@ function add_assessment_history($result_obj, $user_id) {
 
       $sql_2 = "INSERT INTO ".$table_name_2;
       $sql_2 = $sql_2 . " (enroll_id, attempt_date, question_count, correct_count, result, result_id)";
-      $sql_2 = $sql_2 . " (%s, NOW(), %s, %s, %s, %s)";
+      $sql_2 = $sql_2 . " VALUES (%s, NOW(), %s, %s, %s, %s)";
 
-      $prepared_sql_2 = $wpdb->prepare( $sql_2, $enroll_id, $row->questions_count, $row->corrects_count, "1", $row->id );
+      $prepared_sql_2 = $wpdb->prepare( $sql_2, $enroll_id, $result_obj->questions_count, $result_obj->corrects_count, "1", $result_obj->id );
 
-      $retrieved_data = $wpdb->query( $prepared_sql_2 );
+      $wpdb->query( $prepared_sql_2 );
     }
   }
 }
