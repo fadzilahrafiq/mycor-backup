@@ -295,14 +295,21 @@ function assessment_load() {
     return;
   }
 
+  $user_id = get_current_user_id();
+
   ?>
   <script>
-    window.onload( (event) => {
-      const getResultBtn = document.getElementsByName('ays_finish_quiz');
+    window.addEventListener( 'load', (event) => {
+      var formElArr = document.querySelectorAll('input.ays_finish');
 
-      getResultBtn.addEventListener( "submit", (obj) => {
-        console.log(obj);
-      })
+      for (let i = 0; i < formElArr.length; i++) {
+        var formEl = formElArr[i];
+        formEl.addEventListener( 'click', function(event) {
+          var userId = '<?php echo $user_id; ?>';
+
+          
+        })
+      }
     });
   </script>
   <?php
