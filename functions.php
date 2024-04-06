@@ -72,7 +72,31 @@ function course_page_functions() {
 
     $latest_attempt = null;
 
+    $attempt_count = count($attempts);
+
+    ?>
+    <script>
+      function manipulate_progress_bar(count) {
+
+        const progressBarEl = document.getElementById('attempt-progress');
+
+        const progressEl = progressBarEl.querySelector(".elementor-progress-bar");
+
+        var percentage = count == 0 ? 20 : ((count / 3) * 100);
+
+        // progressEl.style.width = percentage+"%" ;
+
+        const progressText = progressBarEl.querySelector(".elementor-progress-text");
+
+        progressText.innerHTML = "Assessment attempts "+count+"/3";
+      }
+    </script>
+    <?php
+
+    echo "<script>window.addEventListener('load', () => { setTimeout(manipulate_progress_bar(".$attempt_count."), 5000) })</script>";
+
     if ( !empty( $attempts ) ) {
+      
       if (count($attempts) >= 3) {
         ?>
         <script>
@@ -262,4 +286,24 @@ function store_order_id_after_payment( $order_id ) {
   }
 
   return;
+}
+
+add_action( 'wp_footer', 'assessment_load' );
+
+function assessment_load() {
+  if ( !is_page( 'asessment' ) ) {
+    return;
+  }
+
+  ?>
+  <script>
+    window.onload( (event) => {
+      const getResultBtn = document.getElementsByName('ays_finish_quiz');
+
+      getResultBtn.addEventListener( "submit", (obj) => {
+        console.log(obj);
+      })
+    });
+  </script>
+  <?php
 }
