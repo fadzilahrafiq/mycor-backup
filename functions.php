@@ -307,10 +307,92 @@ function assessment_load() {
         formEl.addEventListener( 'click', function(event) {
           var userId = '<?php echo $user_id; ?>';
 
-          
+          var currentUrl = window.location.href;
+
+          window.open(currentUrl+"/assessment-processing?userid="+userId);
         })
       }
     });
   </script>
   <?php
+}
+
+add_action( 'wp_footer', 'assessment_processing' );
+
+function assessment_processing() {
+  if ( !is_page( 'assessment-processing' ) ) {
+    return;
+  }
+
+  $user_id = $_GET['userid'];
+
+  global $wpdb;
+
+  $table_name = $wpdb->prefix . "aysquiz_reports";
+
+  $sql = "SELECT * FROM ".$table_name;
+  $sql = $sql . " WHERE user_id = %s ORDER BY id DESC LIMIT 1";
+
+  $prepared_sql = $wpdb->prepare( $sql, $user_id );
+
+  $retrieved_data = $wpdb->get_results( $prepared_sql );
+
+  if ( count( $retrieved_data ) > 0) {
+    foreach ( $retrieved_data as $row ) {
+      $result_id = $row->id;
+
+      $isExist = verify_assessment_data($result_id);
+
+      if (!$isExist) {
+        add_assessment_history($row, $user_id);
+      }
+    }
+  }
+
+  echo "<script>window.close()</script>";
+}
+
+function verify_assessment_data($result_id) {
+  global $wpdb;
+
+  $table_name = "attempt_history";
+
+  $sql = "SELECT * FROM ".$table_name;
+  $sql = $sql . " WHERE result_id = %s";
+
+  $prepared_sql = $wpdb->prepare( $sql, $result_id );
+
+  $retrieved_data = $wpdb->get_results( $prepared_sql );
+
+  return count($retrieved_data) > 0 ? true : false;
+}
+
+function add_assessment_history($result_obj, $user_id) {
+  global $wpdb;
+
+  $table_name = 'enrollment'; // Replace with your table name
+
+  $sql = "SELECT * FROM $table_name WHERE user_id = %s";
+  $sql = $sql . " AND NOW() BETWEEN enroll_date AND expire_date";
+  $sql = $sql . " ORDER BY id DESC LIMIT 1";
+
+  $prepared_sql = $wpdb->prepare( $sql, $user_id );
+
+  $results = $wpdb->get_results( $prepared_sql );
+
+  if (count($results) > 0) {
+    foreach ($results as $row) {
+      $enroll_id = $row->id;
+
+      $table_name_2 = "attempt_history";
+
+      $sql_2 = "INSERT INTO ".$table_name_2;
+      $sql_2 = $sql_2 . " (enroll_id, attempt_date, question_count, correct_count, result, result_id)";
+      $sql_2 = $sql_2 . " (%s, NOW(), %s, %s, %s, %s)";
+
+      $prepared_sql_2 = $wpdb->prepare( $sql_2, $enroll_id, $row->questions_count, $row->corrects_count, "1", $row->id );
+
+      $retrieved_data = $wpdb->query( $prepared_sql_2 );
+    }
+  }
 }
