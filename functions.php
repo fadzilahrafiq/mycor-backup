@@ -54,12 +54,50 @@ function course_page_functions() {
   $active_enroll = get_active_enrollment($user_id);
 
   if ( !empty( $active_enroll ) ) {
-    //START: CHECK FOR CURRENT ATTEMPTS
+    $formatted_date = "";
 
     foreach ( $active_enroll as $active ) {
       $enroll_id = $active->id;
+      $formatted_date = $active->expire_date;
       break;
     }
+
+    ?>
+    <script>
+      var expireTs = '<?php echo $formatted_date; ?>';
+
+      var enrollValidEl = document.getElementById('enroll-valid');
+
+      var enrollValidText = enrollValidEl.querySelector('.elementor-icon-list-text');
+
+      enrollValidText.innerHTML = "Enrollment is valid until "+convertDate(expireTs);
+
+      function convertDate(tsString) {
+        var date = new Date(tsString);
+
+        const monthNames = ["January", "February", "March", "April", "May", "June",
+          "July", "August", "September", "October", "November", "December"];
+        const monthIndex = date.getMonth(); // Zero-based index
+
+        // Extract day, month name, year, hours, minutes
+        const day = date.getDate();
+        const year = date.getFullYear();
+        const hours = date.getHours(); // 24-hour format
+        const minutes = date.getMinutes().toString().padStart(2, '0'); // Add leading zero for single-digit minutes
+
+        // Format AM/PM indicator based on hours
+        const amPm = hours >= 12 ? 'pm' : 'am';
+        const displayHours = hours % 12 === 0 ? 12 : hours % 12; // Convert to 12-hour format (adjust if needed)
+
+        // Format the date and time in desired format
+        const formattedDateTime = `${day} ${monthNames[monthIndex]} ${year} ${displayHours}:${minutes} ${amPm}`;
+
+        return formattedDateTime;
+      }
+    </script>
+    <?php
+
+    //START: CHECK FOR CURRENT ATTEMPTS
 
     $attempts = get_current_attempt($enroll_id);
 
