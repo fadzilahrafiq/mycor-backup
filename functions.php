@@ -103,6 +103,10 @@ function course_page_functions() {
 
     $latest_attempt = null;
 
+    $latest_certificate = null;
+
+    $cert_enrollment = null;
+
     $attempt_count = count($attempts);
 
     ?>
@@ -147,11 +151,79 @@ function course_page_functions() {
         break;
       }
 
-      ?>
-      <script>
-        var lrnEl = document.getElementById('latest-result-number');
-      </script>
-      <?php
+      if ($latest_attempt->result == 1) {
+
+        $latest_certificate = get_active_certificate($latest_attempt->id);
+
+        $cert_enrollment = get_enrollment_by_id($latest_certificate->enroll_id);
+        
+        if (!empty($latest_certificate)) {
+          ?>
+          <script>
+            hide_element('assessment-button');
+          </script>
+          <?php
+        } else {
+          ?>
+          <script>
+            hide_element('cert-button');
+          </script>
+          <?php
+        }
+      }
+
+      if (!empty($latest_attempt)) {
+
+        $resultText = "No record";
+
+        if ($latest_attempt->result == 1) {
+          $resultText = "Success";
+        } else {
+          $resultText = "Failed";
+        }
+
+        if (!empty($latest_certificate) && $latest_certificate->cert_valid == 0 ) {
+          $resultText = "Expired";
+        }
+
+        $statusText = "No record";
+
+        if (!empty($cert_enrollment)) {
+
+          if ($cert_enrollment->enroll_valid == 1) {
+            $statusText = "Active";
+          } else {
+            $statusText = "Expired";
+          }
+        } else if (!empty($active_enroll)) {
+          $statusText = "Active";
+        }
+
+        ?>
+        <script>
+          window.addEventListener('load', () => {
+            var historyNumEl = document.getElementById('history-number');
+            var hnText = historyNumEl.querySelectorAll(".elementor-icon-list-text");
+            if (hnText.length > 0) {
+              hnText[0].innerHTML = "Result: <?php echo $latest_attempt->correct_count;?>/20";
+            }
+
+            var historyResEl = document.getElementById('history-result');
+            var hrText = historyResEl.querySelectorAll(".elementor-icon-list-text");
+            if (hrText.length > 0) {
+              hrText[0].innerHTML = "<?php echo $resultText;?>";
+            }
+
+            var historyStaEl = document.getElementById('history-status');
+            var hsText = historyStaEl.querySelectorAll(".elementor-icon-list-text");
+            if (hsText.length > 0) {
+              hsText[0].innerHTML = "Enrollment: <?php echo $statusText;?>";
+            }
+          })
+        </script>
+        <?php
+      }
+
     } else {
       ?>
       <script>
@@ -202,6 +274,26 @@ function get_active_enrollment($user_id) {
   $results = $wpdb->get_results( $prepared_sql );
 
   return $results;
+}
+
+function get_enrollment_by_id($enroll_id) {
+  global $wpdb;
+
+  $table_name = 'enrollment'; // Replace with your table name
+
+  $sql = "SELECT *, ";
+  $sql = $sql . "(CASE WHEN NOW() BETWEEN enroll_date AND expire_date THEN 1 ELSE 0 END) AS enroll_valid ";
+  $sql = $sql . "FROM $table_name WHERE id = %s";
+
+  $prepared_sql = $wpdb->prepare( $sql, $enroll_id );
+
+  $results = $wpdb->get_results( $prepared_sql );
+
+  if (count($results) <= 0) {
+    return [];
+  }
+
+  return $results[0];
 }
 
 function get_current_attempt($enroll_id) {
@@ -439,17 +531,40 @@ function add_assessment_history($result_obj, $user_id) {
 
       $table_name_2 = "attempt_history";
 
-      $sql_2 = "INSERT INTO ".$table_name_2;
-      $sql_2 = $sql_2 . " (enroll_id, attempt_date, question_count, correct_count, result, result_id)";
-      $sql_2 = $sql_2 . " VALUES (%s, NOW(), %s, %s, %s, %s)";
-
-      $prepared_sql_2 = $wpdb->prepare( $sql_2, $enroll_id, $result_obj->questions_count, $result_obj->corrects_count, "1", $result_obj->id );
-
-      $wpdb->query( $prepared_sql_2 );
-
+      $isPass = 0;
       if ($result_obj->corrects_count >= 10) {
-        generate_certificate($result_obj->id, $user_id, $enroll_id);
+        $isPass = 1;
       }
+
+      $current_date = gmdate('Y-m-d');
+
+      $data = array(
+        'enroll_id' => $enroll_id,
+        'attempt_date' => $current_date,
+        'question_count' => $result_obj->questions_count,
+        'correct_count' => $result_obj->corrects_count,
+        'result' => $isPass,
+        'result_id' => $result_obj->id,
+      );
+
+      // $sql_2 = "INSERT INTO ".$table_name_2;
+      // $sql_2 = $sql_2 . " (enroll_id, attempt_date, question_count, correct_count, result, result_id)";
+      // $sql_2 = $sql_2 . " VALUES (%s, NOW(), %s, %s, %s, %s)";
+
+
+      // $prepared_sql_2 = $wpdb->prepare( $sql_2, $enroll_id, $result_obj->questions_count, $result_obj->corrects_count, $isPass, $result_obj->id );
+
+      // $wpdb->query( $prepared_sql_2 );
+
+      $inserted = $wpdb->insert( $table_name_2, $data );
+
+      if ( $inserted !== false ) {
+        $inserted_id = $wpdb->insert_id;
+
+        if ($result_obj->corrects_count >= 10) {
+          generate_certificate($inserted_id, $user_id, $enroll_id);
+        }
+      } 
     }
   }
 }
@@ -466,4 +581,24 @@ function generate_certificate($assessment_id, $user_id, $enroll_id) {
   $prepared_sql = $wpdb->prepare( $sql, $enroll_id, $assessment_id );
 
   $wpdb->query( $prepared_sql );
+}
+
+function get_active_certificate($attempt_id) {
+  global $wpdb;
+
+  $table_name = 'complete_certificate'; // Replace with your table name
+
+  $sql = "SELECT *, ";
+  $sql = $sql . "(CASE WHEN NOW() BETWEEN valid_date AND expiry_date THEN 1 ELSE 0 END) AS cert_valid ";
+  $sql = $sql . "FROM $table_name WHERE attempt_id = %s";
+
+  $prepared_sql = $wpdb->prepare( $sql, $attempt_id );
+
+  $results = $wpdb->get_results( $prepared_sql );
+
+  if (count($results) <= 0) {
+    return [];
+  }
+
+  return $results[0];
 }
