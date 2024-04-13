@@ -129,7 +129,7 @@ function course_page_functions() {
     <?php
 
     echo "<script>window.addEventListener('load', () => { setTimeout(manipulate_progress_bar(".$attempt_count."), 5000) })</script>";
-
+    
     if ( !empty( $attempts ) ) {
       
       if (count($attempts) >= 3) {
@@ -154,10 +154,11 @@ function course_page_functions() {
       if ($latest_attempt->result == 1) {
 
         $latest_certificate = get_active_certificate($latest_attempt->id);
-
-        $cert_enrollment = get_enrollment_by_id($latest_certificate->enroll_id);
         
         if (!empty($latest_certificate)) {
+
+          $cert_enrollment = get_enrollment_by_id($latest_certificate->enroll_id);
+
           ?>
           <script>
             hide_element('assessment-button');
@@ -170,6 +171,12 @@ function course_page_functions() {
           </script>
           <?php
         }
+      } else {
+        ?>
+        <script>
+          hide_element('cert-button');
+        </script>
+        <?php
       }
 
       if (!empty($latest_attempt)) {
@@ -562,14 +569,14 @@ function add_assessment_history($result_obj, $user_id) {
         $inserted_id = $wpdb->insert_id;
 
         if ($result_obj->corrects_count >= 10) {
-          generate_certificate($inserted_id, $user_id, $enroll_id);
+          create_certification($inserted_id, $user_id, $enroll_id);
         }
       } 
     }
   }
 }
 
-function generate_certificate($assessment_id, $user_id, $enroll_id) {
+function create_certification($assessment_id, $user_id, $enroll_id) {
   global $wpdb;
 
   $table_name = "complete_certificate";
@@ -601,4 +608,73 @@ function get_active_certificate($attempt_id) {
   }
 
   return $results[0];
+}
+
+add_action( 'wp_footer', 'listen_to_certificate' );
+
+function listen_to_certificate() {
+  if ( !is_page( 'course' ) ) {
+    return;
+  }
+
+  $user_id = get_current_user_id();
+
+  ?>
+  <script>
+    window.addEventListener("load", () => {
+     
+      var certificateBtnEl = document.getElementById('cert-button');
+
+      certificateBtnEl.addEventListener("click", () => {
+        var userId = '<?php echo $user_id; ?>';
+
+        var currentUrl = window.location.href;
+
+        window.open(currentUrl+"/certificate-download?userid="+userId);
+      });
+
+    });
+  </script>
+  <?php
+}
+
+add_action( 'wp_footer', 'perform_certificate_download' );
+
+function perform_certificate_download() {
+  if ( !is_page( 'certificate-download' ) ) {
+    return;
+  }
+
+  $user_id = $_GET['userid'];
+
+  global $wpdb;
+
+  // $table_name = 'complete_certificate'; // Replace with your table name
+  $table_name = $wpdb->prefix . "users";
+
+  $sql = "SELECT cc.expiry_date expiry_date, uu.display_name display_name ";
+  $sql = $sql . "FROM complete_certificate cc INNER JOIN enrollment ee ON cc.enroll_id = ee.id ";
+  $sql = $sql . "INNER JOIN $table_name uu ON ee.user_id = uu.ID ";
+  $sql = $sql . "WHERE ee.user_id = %s ";
+  $sql = $sql . "AND NOW() BETWEEN cc.valid_date AND cc.expiry_date ";
+  $sql = $sql . "ORDER BY cc.id DESC LIMIT 1";
+
+  $prepared_sql = $wpdb->prepare( $sql, $user_id );
+
+  $results = $wpdb->get_results( $prepared_sql );
+
+  foreach( $results as $row ) {
+    $pdf_output = generate_certificate($row->display_name);
+
+    echo "<script>console.log('".json_encode($pdf_output)."');</script>";
+
+    // Prepare headers for PDF download
+    header('Content-Description: File Transfer');
+    header('Content-Type: application/octet-stream');
+    header('Content-Disposition: attachment; filename=certificate-' . $user_id . '.pdf');
+    header('Content-Length: ' . strlen($pdf_output));
+
+    // Send the generated PDF content to the browser for download
+    echo $pdf_output;
+  }
 }
