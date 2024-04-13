@@ -446,6 +446,24 @@ function add_assessment_history($result_obj, $user_id) {
       $prepared_sql_2 = $wpdb->prepare( $sql_2, $enroll_id, $result_obj->questions_count, $result_obj->corrects_count, "1", $result_obj->id );
 
       $wpdb->query( $prepared_sql_2 );
+
+      if ($result_obj->corrects_count >= 10) {
+        generate_certificate($result_obj->id, $user_id, $enroll_id);
+      }
     }
   }
+}
+
+function generate_certificate($assessment_id, $user_id, $enroll_id) {
+  global $wpdb;
+
+  $table_name = "complete_certificate";
+
+  $sql = "INSERT INTO ".$table_name;
+  $sql = $sql . " (enroll_id, attempt_id, completion_date, valid_date, expiry_date)";
+  $sql = $sql . " VALUES (%s, %s, NOW(), NOW(), NOW() + INTERVAL 1 YEAR )";
+
+  $prepared_sql = $wpdb->prepare( $sql, $enroll_id, $assessment_id );
+
+  $wpdb->query( $prepared_sql );
 }
