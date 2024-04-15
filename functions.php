@@ -651,10 +651,12 @@ function perform_certificate_download() {
 
   // $table_name = 'complete_certificate'; // Replace with your table name
   $table_name = $wpdb->prefix . "users";
+  $table_meta = $wpdb->prefix . "usermeta";
 
-  $sql = "SELECT cc.expiry_date expiry_date, uu.display_name display_name ";
+  $sql = "SELECT cc.valid_date valid_date, uu.display_name display_name, um.meta_value passport_value ";
   $sql = $sql . "FROM complete_certificate cc INNER JOIN enrollment ee ON cc.enroll_id = ee.id ";
   $sql = $sql . "INNER JOIN $table_name uu ON ee.user_id = uu.ID ";
+  $sql = $sql . "INNER JOIN (SELECT * FROM $table_meta WHERE meta_key = 'passport') um ON uu.ID = um.user_id ";
   $sql = $sql . "WHERE ee.user_id = %s ";
   $sql = $sql . "AND NOW() BETWEEN cc.valid_date AND cc.expiry_date ";
   $sql = $sql . "ORDER BY cc.id DESC LIMIT 1";
@@ -664,7 +666,7 @@ function perform_certificate_download() {
   $results = $wpdb->get_results( $prepared_sql );
 
   foreach( $results as $row ) {
-    $pdf_output = generate_certificate($row->display_name, "(ASD134203ASD123)");
+    $pdf_output = generate_certificate($row->display_name, "(".$row->passport_value.")", "Issued Date: ".$row->vaid_date);
 
     echo "<script>console.log('".json_encode($pdf_output)."');</script>";
 
@@ -676,5 +678,56 @@ function perform_certificate_download() {
 
     // Send the generated PDF content to the browser for download
     echo $pdf_output;
+  }
+}
+
+add_action( 'wp_footer', 'update_profile_view' );
+
+function update_profile_view() {
+  if ( !is_page( 'profile' ) ) {
+    return;
+  }
+
+  $user_id = get_current_user_id();
+
+  update_profile_view_userinfo($user_id);
+}
+
+function update_profile_view_userinfo($user_id) {
+  global $wpdb;
+
+  $table_name = $wpdb->prefix . "users";
+  $table_meta = $wpdb->prefix . "usermeta";
+
+  $sql = "SELECT uu.display_name display_name, uu.user_email user_email, um.meta_value passport_value ";
+  $sql = $sql . "FROM $table_name uu ";
+  $sql = $sql . "INNER JOIN (SELECT * FROM $table_meta WHERE meta_key = 'passport') um ON uu.ID = um.user_id ";
+  $sql = $sql . "WHERE uu.id = %s ORDER BY uu.id DESC LIMIT 1";
+
+  $prepared_sql = $wpdb->prepare( $sql, $user_id );
+
+  $results = $wpdb->get_results( $prepared_sql );
+
+  foreach( $results as $row ) {
+    ?>
+    <script>
+      var email_id = '<?php echo $row->user_email; ?>';
+      var passport = '<?php echo $row->passport_value; ?>';
+
+      var emailEl = document.getElementById('profile-email');
+      var emailChildEl = emailEl.querySelectorAll('.elementor-icon-list-text');
+      if (emailChildEl.length > 0) {
+        emailChildEl[0].innerHTML =  "Email: "+email_id;
+      }
+      // emailEl.innerHTML = "Email: "+email_id;
+
+      var passportEl = document.getElementById('profile-passport');
+      var passportChildEl = passportEl.querySelectorAll('.elementor-icon-list-text');
+      if (passportChildEl.length > 0) {
+        passportChildEl[0].innerHTML =  "Passport: "+passport;
+      }
+      // passportEl.innerHTML = "Passport: "+passport;
+    </script>
+    <?php
   }
 }

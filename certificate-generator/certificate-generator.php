@@ -60,7 +60,7 @@ require_once( 'fpdf186/fpdf.php' );
 
 // }
 
-function generate_certificate( $name_text, $cert_text ) {
+function generate_certificate( $name_text, $cert_text, $date_issue_text = "" ) {
 
   $template_path = plugin_dir_path( __FILE__ ) . 'assets/CERT_MYCOR.jpeg';
 
@@ -79,14 +79,17 @@ function generate_certificate( $name_text, $cert_text ) {
 
   $name_width = $new_pdf->GetStringWidth($name_text);
   $cert_width = $new_pdf->GetStringWidth($cert_text);
+  $date_width = $new_pdf->GetStringWidth($date_issue_text);
   $line_spacing = 200;
 
 
   $name_x_center = (($new_pdf->GetPageWidth() - $name_width) / 2);  // Calculate horizontal center based on new page width
   $cert_x_center = (($new_pdf->GetPageWidth() - $cert_width) / 2);  // Calculate horizontal center based on new page width
+  $date_x_center = (($new_pdf->GetPageWidth() - $date_width) / 2);  // Calculate horizontal center based on new page width
   $y_position = ($new_pdf->GetPageHeight())/2; //50;  // Adjust vertical position as needed
   $new_pdf->Text($name_x_center, $y_position, $name_text);
   $new_pdf->Text($cert_x_center, $y_position + $line_spacing, $cert_text);
+  $new_pdf->Text($date_x_center, $y_position + $line_spacing + $line_spacing, $date_issue_text);
 
   // $pdf_output = $new_pdf->Output('custom_certificate.pdf', 'F'); 
   $pdf_output = $new_pdf->Output('S'); 
