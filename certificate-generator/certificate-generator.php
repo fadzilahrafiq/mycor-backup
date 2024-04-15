@@ -60,31 +60,37 @@ require_once( 'fpdf186/fpdf.php' );
 
 // }
 
-function generate_certificate( $custom_text ) {
+function generate_certificate( $name_text, $cert_text ) {
 
-    $template_path = plugin_dir_path( __FILE__ ) . 'assets/CERT_MYCOR.jpeg';
+  $template_path = plugin_dir_path( __FILE__ ) . 'assets/CERT_MYCOR.jpeg';
 
-    // $template_pdf = new FPDF();
-    $new_pdf = new FPDF();
+  // $template_pdf = new FPDF();
+  $new_pdf = new FPDF();
 
-    // $template_pdf->setSourceFile($template_path);
-    // $template_page = $template_pdf->ImportPage(1);  // Assuming text is on the first page
-    // $size = $template_pdf->GetPageSize($template_page);
+  // $template_pdf->setSourceFile($template_path);
+  // $template_page = $template_pdf->ImportPage(1);  // Assuming text is on the first page
+  // $size = $template_pdf->GetPageSize($template_page);
 
-    $new_pdf->AddPage('L', [3508, 2480], 0 );
+  $new_pdf->AddPage('L', [3508, 2480], 0 );
 
-    $new_pdf->Image($template_path, 0, 0, 3508, 2480);
-    
-    $new_pdf->SetFont('Arial', 'B', 250); // Example: Arial, bold, size 16
-
-    $text_width = $new_pdf->GetStringWidth($custom_text);
-    $x_center = (($new_pdf->GetPageWidth()) / 2) - $text_width;  // Calculate horizontal center based on new page width
-    $y_position = ($new_pdf->GetPageHeight())/2; //50;  // Adjust vertical position as needed
-    $new_pdf->Text($x_center, $y_position, $custom_text);
-
-    // $pdf_output = $new_pdf->Output('custom_certificate.pdf', 'F'); 
-    $pdf_output = $new_pdf->Output('S'); 
+  $new_pdf->Image($template_path, 0, 0, 3508, 2480);
   
-    return $pdf_output;
-  
-  }
+  $new_pdf->SetFont('Arial', 'B', 300); // Example: Arial, bold, size 16
+
+  $name_width = $new_pdf->GetStringWidth($name_text);
+  $cert_width = $new_pdf->GetStringWidth($cert_text);
+  $line_spacing = 200;
+
+
+  $name_x_center = (($new_pdf->GetPageWidth() - $name_width) / 2);  // Calculate horizontal center based on new page width
+  $cert_x_center = (($new_pdf->GetPageWidth() - $cert_width) / 2);  // Calculate horizontal center based on new page width
+  $y_position = ($new_pdf->GetPageHeight())/2; //50;  // Adjust vertical position as needed
+  $new_pdf->Text($name_x_center, $y_position, $name_text);
+  $new_pdf->Text($cert_x_center, $y_position + $line_spacing, $cert_text);
+
+  // $pdf_output = $new_pdf->Output('custom_certificate.pdf', 'F'); 
+  $pdf_output = $new_pdf->Output('S'); 
+
+  return $pdf_output;
+
+}

@@ -664,7 +664,7 @@ function perform_certificate_download() {
   $results = $wpdb->get_results( $prepared_sql );
 
   foreach( $results as $row ) {
-    $pdf_output = generate_certificate($row->display_name);
+    $pdf_output = generate_certificate($row->display_name, "(ASD134203ASD123)");
 
     echo "<script>console.log('".json_encode($pdf_output)."');</script>";
 
