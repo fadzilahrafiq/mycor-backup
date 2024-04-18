@@ -666,7 +666,7 @@ function perform_certificate_download() {
   $results = $wpdb->get_results( $prepared_sql );
 
   foreach( $results as $row ) {
-    $pdf_output = generate_certificate($row->display_name, "(".$row->passport_value.")", "Issued Date: ".$row->vaid_date);
+    $pdf_output = generate_certificate($row->display_name, "(".$row->passport_value.")", "Issued Date: ".$row->valid_date);
 
     echo "<script>console.log('".json_encode($pdf_output)."');</script>";
 
@@ -730,4 +730,67 @@ function update_profile_view_userinfo($user_id) {
     </script>
     <?php
   }
+}
+
+add_action( 'wp_footer', 'update_user_info' );
+
+function update_user_info() {
+  if ( !is_page( 'user-info' ) ) {
+    return;
+  }
+
+  $user_id = get_current_user_id();
+ 
+  $user_obj = get_user_full_date($user_id);
+
+  ?>
+  <script>
+    window.addEventListener("load", () => {
+      update_user_field();
+    });
+
+    function update_user_field() {
+      var usernameEl = document.querySelectorAll(".wpforms-field-username");
+      var unameObj = usernameEl[0].querySelectorAll('#wpforms-832-field_8');
+      unameObj[0].value = '<?php echo $user_obj->info->user_login ;?>';
+
+      var usernameEl = document.querySelectorAll(".wpforms-field-email");
+      var unameObj = usernameEl[0].querySelectorAll('#wpforms-832-field_9');
+      unameObj[0].value = '<?php echo $user_obj->info->user_email ;?>';
+    }
+  </script>
+  <?php
+}
+
+function get_user_full_date($user_id) {
+  global $wpdb;
+
+  $table_name = $wpdb->prefix . "users";
+  $table_meta = $wpdb->prefix . "usermeta";
+
+  $user_obj = new stdClass;
+
+  $sql = "SELECT * ";
+  $sql = $sql . "FROM $table_name ";
+  $sql = $sql . "WHERE id = %s LIMIT 1";
+
+  $prepared_sql = $wpdb->prepare( $sql, $user_id );
+
+  $results = $wpdb->get_results( $prepared_sql );
+
+  $user_obj->info = $results[0];
+
+  foreach( $results as $row ) {
+    $sql2 = "SELECT * ";
+    $sql2 = $sql2 . "FROM $table_meta ";
+    $sql2 = $sql2 . "WHERE user_id = %s ";
+
+    $prepared_sql2 = $wpdb->prepare( $sql2, $row->ID );
+
+    $results2 = $wpdb->get_results( $prepared_sql2 );
+
+    $user_obj->meta = $results2;
+  }
+
+  return $user_obj;
 }

@@ -74,21 +74,23 @@ function generate_certificate( $name_text, $cert_text, $date_issue_text = "" ) {
   $new_pdf->AddPage('L', [3508, 2480], 0 );
 
   $new_pdf->Image($template_path, 0, 0, 3508, 2480);
+
+  $line_spacing = 200;
+  $y_position = ($new_pdf->GetPageHeight())/2; //50;  // Adjust vertical position as needed
   
   $new_pdf->SetFont('Arial', 'B', 300); // Example: Arial, bold, size 16
-
   $name_width = $new_pdf->GetStringWidth($name_text);
-  $cert_width = $new_pdf->GetStringWidth($cert_text);
-  $date_width = $new_pdf->GetStringWidth($date_issue_text);
-  $line_spacing = 200;
-
-
   $name_x_center = (($new_pdf->GetPageWidth() - $name_width) / 2);  // Calculate horizontal center based on new page width
-  $cert_x_center = (($new_pdf->GetPageWidth() - $cert_width) / 2);  // Calculate horizontal center based on new page width
-  $date_x_center = (($new_pdf->GetPageWidth() - $date_width) / 2);  // Calculate horizontal center based on new page width
-  $y_position = ($new_pdf->GetPageHeight())/2; //50;  // Adjust vertical position as needed
   $new_pdf->Text($name_x_center, $y_position, $name_text);
+
+  $new_pdf->SetFont('Arial', '', 300); // Example: Arial, bold, size 16
+  $cert_width = $new_pdf->GetStringWidth($cert_text);
+  $cert_x_center = (($new_pdf->GetPageWidth() - $cert_width) / 2);  // Calculate horizontal center based on new page width
   $new_pdf->Text($cert_x_center, $y_position + $line_spacing, $cert_text);
+
+  $new_pdf->SetFont('Arial', '', 200); // Example: Arial, bold, size 16
+  $date_width = $new_pdf->GetStringWidth($date_issue_text);
+  $date_x_center = (($new_pdf->GetPageWidth() - $date_width) / 2);  // Calculate horizontal center based on new page width
   $new_pdf->Text($date_x_center, $y_position + $line_spacing + $line_spacing, $date_issue_text);
 
   // $pdf_output = $new_pdf->Output('custom_certificate.pdf', 'F'); 
